@@ -42,6 +42,6 @@ def calculate_stag_mag(Lx,Ly,samples):
     stag_mags = (-1*magA + magB)/(Lx*Ly)
     avg_stag_mag = np.mean(stag_mags)
     abs_avg_stag_mag = np.mean(abs(stag_mags))
-    var = np.var(stag_mags)
+    var = np.var(abs(stag_mags))
     return stag_mags,avg_stag_mag,abs_avg_stag_mag,var
 
