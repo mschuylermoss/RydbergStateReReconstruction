@@ -7,7 +7,7 @@ sys.path.append('../..')
 from dset_helpers import data_given_param
 from train_VMC import Train_w_VMC
 from train_data import Train_w_Data
-from train_hybrid import Train_w_Data_then_VMC
+from train_hybrid_f1 import Train_w_Data_then_VMC
 
 #--
 import argparse
@@ -28,6 +28,12 @@ parser.add_argument('--nh', type=int, default=32,
 # Optional argument
 parser.add_argument('--seed', type=int, default=100,
                     help='An optional integer argument: seed for RNG')
+# Optional argument
+parser.add_argument('--dset_size', type=int, default=1000,
+                    help='An optional integer argument: number of qmc samples to use as data')
+# Optional argument
+parser.add_argument('--qmc_data',action='store_true',
+                    help='A switch to indicate which data to use')
 args = parser.parse_args()
 #--
 
@@ -43,10 +49,12 @@ data_steps_arg = args.data_epochs
 rnn_dim_arg = args.rnn_dim
 nh_arg = args.nh
 seed_arg = args.seed
+qmc_data_arg = args.qmc_data
+dset_size_arg = args.dset_size
 
 def main():
     config = {
-        'name': 'Figure2', # A very random name for each experiment
+        'name': 'Figure1', # A very random name for each experiment
 
         'Lx':Lx,  # number of sites in x-direction                    
         'Ly':Ly,  # number of sites in the y-directioni
@@ -56,14 +64,16 @@ def main():
         'sweep_rate':sweep_rate,
         
         'nh': nh_arg,  # number of memory/hidden units
-        'lr': 5e-4,  # learning rate
+        'lr': 1e-4,  # learning rate
         'weight_sharing': True,
         'trunc': 100,
         'seed': seed_arg,
         
         'RNN': rnn_dim_arg,
-        'VMC_epochs':10000,
+        'VMC_epochs':500,
         'Data_epochs':data_steps_arg,
+        'QMC_data':qmc_data_arg,
+        'dset_size':dset_size_arg,
         
         'ns': 100,
         'batch_size_data': 100,

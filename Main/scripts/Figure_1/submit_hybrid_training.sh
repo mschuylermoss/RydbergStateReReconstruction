@@ -23,4 +23,6 @@ echo $nh
 python script_hybrid_training.py \
     $delta $data_epochs \
     --rnn_dim $dim --nh $nh \
-    --seed $seed
+    --seed $seed \
+    --qmc_data \
+    --dset_size 1000 \

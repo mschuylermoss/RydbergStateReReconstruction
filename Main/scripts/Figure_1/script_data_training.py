@@ -26,8 +26,14 @@ parser.add_argument('--rnn_dim', type=str, default='OneD',
 parser.add_argument('--nh', type=int, default=32,
                     help='An optional integer argument: number of hidden units')
 # Optional argument
-parser.add_argument('--seed', type=int, default=100,
-                    help='An optional integer argument: seed for RNG')
+parser.add_argument('--seed', type=int, default=111,
+                    help='An optional integer argument: seed')
+# Optional argument
+parser.add_argument('--dset_size', type=int, default=1000,
+                    help='An optional integer argument: number of qmc samples to use as data')
+                    # Optional argument
+parser.add_argument('--qmc_data',action='store_true',
+                    help='A switch to indicate which data to use')
 args = parser.parse_args()
 #--
 
@@ -43,10 +49,12 @@ data_steps_arg = args.data_epochs
 rnn_dim_arg = args.rnn_dim
 nh_arg = args.nh
 seed_arg = args.seed
+qmc_data_arg = args.qmc_data
+dset_size_arg = args.dset_size
 
 def main():
     config = {
-        'name': 'Figure2', 
+        'name': 'Figure1', 
 
         'Lx':Lx,  # number of sites in x-direction                    
         'Ly':Ly,  # number of sites in the y-directioni
@@ -64,6 +72,8 @@ def main():
         'RNN': rnn_dim_arg,
         'VMC_epochs':0,
         'Data_epochs':data_steps_arg,
+        'QMC_data':qmc_data_arg,
+        'dset_size':dset_size_arg,
         
         'ns': 100,
         'batch_size_data': 100,
