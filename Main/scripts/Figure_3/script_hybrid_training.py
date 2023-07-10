@@ -56,13 +56,13 @@ def main():
         'sweep_rate':sweep_rate,
         
         'nh': nh_arg,  # number of memory/hidden units
-        'lr': 1e-3,  # learning rate
+        'lr': 5e-5,  # learning rate
         'weight_sharing': True,
         'trunc': 100,
         'seed': seed_arg,
         
         'RNN': rnn_dim_arg,
-        'VMC_epochs':10000,
+        'VMC_epochs':2000,
         'Data_epochs':data_steps_arg,
         
         'ns': 100,
