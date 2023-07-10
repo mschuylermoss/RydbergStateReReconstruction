@@ -28,6 +28,8 @@ parser.add_argument('--nh', type=int, default=32,
 # Optional argument
 parser.add_argument('--seed', type=int, default=100,
                     help='An optional integer argument: seed for RNG')
+parser.add_argument('--lr', type=float, default=1e-3,
+                    help='An optional float argument: learning rate')
 args = parser.parse_args()
 #--
 
@@ -43,6 +45,7 @@ data_steps_arg = args.data_epochs
 rnn_dim_arg = args.rnn_dim
 nh_arg = args.nh
 seed_arg = args.seed
+lr_arg = args.lr
 
 def main():
     config = {
@@ -56,13 +59,13 @@ def main():
         'sweep_rate':sweep_rate,
         
         'nh': nh_arg,  # number of memory/hidden units
-        'lr': 5e-4,  # learning rate
+        'lr': lr_arg,  # learning rate
         'weight_sharing': True,
         'trunc': 100,
         'seed': seed_arg,
         
         'RNN': rnn_dim_arg,
-        'VMC_epochs':10000,
+        'VMC_epochs':2000,
         'Data_epochs':data_steps_arg,
         
         'ns': 100,
@@ -77,4 +80,4 @@ def main():
 
 
 if __name__ == "__main__":
-    model,e,v,c = main()
+    model,e,v,sm,c = main()

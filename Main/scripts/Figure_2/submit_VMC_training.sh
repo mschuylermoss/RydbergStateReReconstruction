@@ -3,7 +3,7 @@
 #SBATCH --gpus-per-node=p100  
 #SBATCH --output=outputs/slurm-%A_%a.out 
 #SBATCH --mem=20000
-#SBATCH --account=rrg-rgmelko-ab
+#SBATCH --account=def-rgmelko
 #SBATCH --mail-user=msmoss@uwaterloo.ca
 #SBATCH --mail-type=FAIL,END
 
@@ -18,8 +18,11 @@ source ../ReconstructRydberg/bin/activate
 echo $delta
 echo $dim
 echo $nh
+echo $lr
 
 python script_VMC_training.py \
     $delta 0 \
-    --rnn_dim $dim --nh $nh \
-    --seed $seed
+    --rnn_dim $dim \
+    --nh $nh \
+    --seed $seed \
+    --lr $lr

@@ -3,7 +3,7 @@
 #SBATCH --gpus-per-node=p100  
 #SBATCH --output=outputs/slurm-%A_%a.out 
 #SBATCH --mem=20000
-#SBATCH --account=rrg-rgmelko-ab
+#SBATCH --account=def-rgmelko
 #SBATCH --mail-user=msmoss@uwaterloo.ca
 #SBATCH --mail-type=FAIL
 
@@ -19,8 +19,11 @@ echo $delta
 echo $data_epochs
 echo $dim
 echo $nh
+echo $lr
 
 python script_hybrid_training.py \
     $delta $data_epochs \
-    --rnn_dim $dim --nh $nh \
-    --seed $seed
+    --rnn_dim $dim \
+    --nh $nh \
+    --seed $seed \
+    --lr $lr
