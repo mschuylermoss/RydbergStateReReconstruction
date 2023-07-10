@@ -7,7 +7,6 @@ from dset_helpers import create_KZ_tf_dataset, data_given_param
 from OneD_RNN import OneD_RNN_wavefxn,RNNWavefunction1D
 from TwoD_RNN import MDRNNWavefunction,MDTensorizedRNNCell,MDRNNGRUcell
 from energy_func import buildlattice,construct_mats,get_Rydberg_Energy_Vectorized
-from stag_mag import calculate_stag_mag
 
 def optimizer_initializer(optimizer):
     fake_var = tf.Variable(1.0)
@@ -60,18 +59,19 @@ def Train_w_Data_then_VMC(config):
 
     # ---- Data Path ---------------------------------------------------------------------------
     exp_name = config['name']
-    # # Add-ons for Figure 1
-    # if qmc_data:
-    #     path_old = f'./data/N_{Lx*Ly}/{exp_name}/QMC_data/dset_size_{dset_size}/{num_hidden}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
-    #     hybrid_addition = f'/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
-    #     path_new = path_old+hybrid_addition
-    # else:
-    #     path_old = f'./data/N_{Lx*Ly}/{exp_name}/Exp_data/nh_{num_hidden}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
-    #     hybrid_addition = f'/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
-    #     path_new = path_old+hybrid_addition
-    path_old = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
+    # Add-ons for Figure 1
+    if qmc_data:
+        dset_size = config.get('dset_size',1000)
+        path_old = f'./data/N_{Lx*Ly}/{exp_name}/QMC_data/dset_size_{dset_size}/nh_{num_hidden}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
+        hybrid_addition = f'/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
+        path_new = path_old+hybrid_addition
+    else:
+        path_old = f'./data/N_{Lx*Ly}/{exp_name}/Exp_data/nh_{num_hidden}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
+        hybrid_addition = f'/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
+        path_new = path_old+hybrid_addition
+    # path_old = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
     # path_new = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}/hybrid_training/{data_epochs}_datasteps'
-    path_new = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
+    # path_new = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}/hybrid_training/lr_{learning_rate}/{data_epochs}_datasteps'
     if not os.path.exists(path_new):
         os.makedirs(path_new)
     with open(path_new+'/config.txt', 'w') as file:
@@ -127,7 +127,7 @@ def Train_w_Data_then_VMC(config):
     # ---- Start From CKPT or Scratch -------------------------------------------------------------
     ckpt = tf.train.Checkpoint(step=global_step, optimizer=wavefxn.optimizer, variables=wavefxn.trainable_variables) # these are trackable objects - we get to specify
     manager_old = tf.train.CheckpointManager(ckpt, path_old, max_to_keep=1)
-    manager_new = tf.train.CheckpointManager(ckpt, path_new, max_to_keep=5)
+    manager_new = tf.train.CheckpointManager(ckpt, path_new, max_to_keep=1)
     load_only = config.get('Load_Only', False)
 
     if load_only:
@@ -137,7 +137,6 @@ def Train_w_Data_then_VMC(config):
         optimizer_initializer(wavefxn.optimizer)
         energy = np.load(path_new+'/Energy.npy').tolist()[0:ckpt_step]
         variance = np.load(path_new+'/Variance.npy').tolist()[0:ckpt_step]
-        stag_mag = np.load(path_new+'/StagMag.npy').tolist()[0:latest_ckpt]
         cost = np.load(path_new+'/Cost.npy').tolist()[0:ckpt_step]
         global_step = tf.constant(total_epochs) # so that we dont keep training
     else:
@@ -157,8 +156,8 @@ def Train_w_Data_then_VMC(config):
                 optimizer_initializer(wavefxn.optimizer)
                 print(f"Continuing at step {ckpt.step.numpy()}")
                 energy = np.load(path_old+'/Energy.npy').tolist()[0:ckpt_step]
+                print("ENERGY LEN AFTER CKPT: ",len(energy))
                 variance = np.load(path_old+'/Variance.npy').tolist()[0:ckpt_step]
-                stag_mag = np.load(path_old+'/StagMag.npy').tolist()[0:ckpt_step]
                 cost = np.load(path_old+'/Cost.npy').tolist()[0:ckpt_step]
                 wavefxn.optimizer.lr = learning_rate
             elif manager_old.latest_checkpoint:
@@ -169,7 +168,6 @@ def Train_w_Data_then_VMC(config):
                 print(f"Continuing at step {ckpt.step.numpy()}")
                 energy = np.load(path_old+'/Energy.npy').tolist()[0:latest_ckpt]
                 variance = np.load(path_old+'/Variance.npy').tolist()[0:latest_ckpt]
-                stag_mag = np.load(path_old+'/StagMag.npy').tolist()[0:latest_ckpt]
                 cost = np.load(path_old+'/Cost.npy').tolist()[0:latest_ckpt]
                 wavefxn.optimizer.lr = learning_rate
             else:
@@ -177,19 +175,16 @@ def Train_w_Data_then_VMC(config):
                 latest_ckpt = 0
                 energy = []
                 variance = []
-                stag_mag = []
                 cost = []
         else:
             print("CKPT OFF. Initializing from scratch.")
             latest_ckpt = 0
             energy = []
             variance = []
-            stag_mag = []
             cost = []
 
     # ---- Train ----------------------------------------------------------------------------------
     it = global_step.numpy()
-    print(f'Training starts at step {it}')
 
     for n in range(it+1, total_epochs+1):
         samples, _ = wavefxn.sample(ns)
@@ -217,27 +212,22 @@ def Train_w_Data_then_VMC(config):
         var_E = np.var(energies)/float(wavefxn.N)
         energy.append(avg_E)
         variance.append(var_E)
-        _,_,avg_abs_stag_mag,_ = calculate_stag_mag(Lx,Ly,samples.numpy())
-        stag_mag.append(avg_abs_stag_mag)
         cost.append(avg_loss)
 
         if (config['Print']) & (n%50 == 0):
-            print(" ")
             print(f"Step #{n}")
             print(f"Energy = {avg_E}")
             print(f"Variance = {var_E}")
-            print(f"Staggered Magnetization = {avg_abs_stag_mag}")
-
-        if (config['Write_Data']) & (n%50 == 0):
-            print(f"Saved training quantitites for step {n} in {path_new}.")
-            np.save(path_new+'/Energy',energy)
-            np.save(path_new+'/Variance',variance)
-            np.save(path_new+'/StagMag',stag_mag)
-            np.save(path_new+'/Cost',cost)
             print(" ")
 
         if (config['CKPT']) & (n%50 == 0):
             manager_new.save()
             print(f"Saved checkpoint for step {n} in {path_new}.")
 
-    return wavefxn, energy, variance, stag_mag, cost
+        if (config['Write_Data']) & (n%50 == 0):
+            print(f"Saved training quantitites for step {n} in {path_new}.")
+            np.save(path_new+'/Energy',energy)
+            np.save(path_new+'/Variance',variance)
+            np.save(path_new+'/Cost',cost)
+
+    return wavefxn, energy, variance,cost

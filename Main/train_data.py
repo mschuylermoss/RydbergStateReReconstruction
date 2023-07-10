@@ -8,6 +8,7 @@ from dset_helpers import load_KZ_QMC_uncorr_data_from_batches,create_KZ_QMC_tf_d
 from OneD_RNN import OneD_RNN_wavefxn,RNNWavefunction1D
 from TwoD_RNN import MDRNNWavefunction,MDTensorizedRNNCell,MDRNNGRUcell
 from energy_func import buildlattice,construct_mats,get_Rydberg_Energy_Vectorized
+from stag_mag import calculate_stag_mag
 
 def optimizer_initializer(optimizer):
     fake_var = tf.Variable(1.0)
@@ -68,10 +69,10 @@ def Train_w_Data(config):
 
     # ---- Data Path ---------------------------------------------------------------------------
     exp_name = config['name']
-    if qmc_data:
-        path = f'./data/N_{Lx*Ly}/{exp_name}/QMC_data/dset_size_{dset_size}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
-    else:
-        path = f'./data/N_{Lx*Ly}/{exp_name}/Exp_data/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
+    # if qmc_data:
+    #     path = f'./data/N_{Lx*Ly}/{exp_name}/QMC_data/dset_size_{dset_size}/nh_{num_hidden}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
+    # else:
+    path = f'./data/N_{Lx*Ly}/{exp_name}/{rnn_type}_rnn/delta_{delta}/seed_{seed}'
     if not os.path.exists(path):
         os.makedirs(path)
     with open(path+'/config.txt', 'w') as file:
@@ -139,6 +140,7 @@ def Train_w_Data(config):
             print(f"Continuing at step {ckpt.step.numpy()}")
             energy = np.load(path+'/Energy.npy').tolist()[0:latest_ckpt]
             variance = np.load(path+'/Variance.npy').tolist()[0:latest_ckpt]
+            stag_mag = np.load(path+'/StagMag.npy').tolist()[0:latest_ckpt]
             cost = np.load(path+'/Cost.npy').tolist()[0:latest_ckpt]
 
         else:
@@ -147,6 +149,7 @@ def Train_w_Data(config):
             start_from_ckpt = False
             energy = []
             variance = []
+            stag_mag = []
             cost = []
 
     else:
@@ -155,6 +158,7 @@ def Train_w_Data(config):
         latest_ckpt = 0
         energy = []
         variance = []
+        stag_mag = []
         cost = []
 
     # ---- Train ----------------------------------------------------------------------------------
@@ -186,12 +190,15 @@ def Train_w_Data(config):
         var_E = np.var(energies)/float(wavefxn.N)
         energy.append(avg_E)
         variance.append(var_E)
+        _,_,avg_abs_stag_mag,_ = calculate_stag_mag(Lx,Ly,samples.numpy())
+        stag_mag.append(avg_abs_stag_mag)
         cost.append(avg_loss)
 
         if (config['Print']) & (n%50 == 0):
             print(f"Step #{n}")
             print(f"Energy = {avg_E}")
             print(f"Variance = {var_E}")
+            print(f"Staggered Magnetization = {avg_abs_stag_mag}")
             print(" ")
 
         if (config['CKPT']) & (n%10 == 0): # checkpoint frequently during data training
@@ -202,6 +209,7 @@ def Train_w_Data(config):
             print(f"Saved training quantitites for step {n} in {path}.")
             np.save(path+'/Energy',energy)
             np.save(path+'/Variance',variance)
+            np.save(path+'/StagMag',stag_mag)
             np.save(path+'/Cost',cost)
 
-    return wavefxn, energy, variance,cost
+    return wavefxn, energy, variance, stag_mag, cost

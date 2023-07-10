@@ -7,6 +7,7 @@ from dset_helpers import load_exact_Es
 from OneD_RNN import OneD_RNN_wavefxn, RNNWavefunction1D
 from TwoD_RNN import MDRNNWavefunction,MDTensorizedRNNCell,MDRNNGRUcell
 from energy_func import buildlattice,construct_mats,get_Rydberg_Energy_Vectorized
+from stag_mag import calculate_stag_mag
 
 def optimizer_initializer(optimizer):
     fake_var = tf.Variable(1.0)
@@ -118,18 +119,21 @@ def Train_w_VMC(config):
             print(f"Continuing at step {ckpt.step.numpy()}")
             energy = np.load(path+'/Energy.npy').tolist()[0:latest_ckpt]
             variance = np.load(path+'/Variance.npy').tolist()[0:latest_ckpt]
+            stag_mag = np.load(path+'/StagMag.npy').tolist()[0:latest_ckpt]
             cost = np.load(path+'/Cost.npy').tolist()[0:latest_ckpt]
 
         else:
             print("CKPT ON but no ckpt found. Initializing from scratch.")
             energy = []
             variance = []
+            stag_mag = []
             cost = []
 
     else:
         print("CKPT OFF. Initializing from scratch.")
         energy = []
         variance = []
+        stag_mag = []
         cost = []
 
     # ---- Train ----------------------------------------------------------------------------------
@@ -161,12 +165,15 @@ def Train_w_VMC(config):
         var_E = np.var(energies)/float(wavefxn.N)
         energy.append(avg_E)
         variance.append(var_E)
+        _,_,avg_abs_stag_mag,_ = calculate_stag_mag(Lx,Ly,samples.numpy())
+        stag_mag.append(avg_abs_stag_mag)
         cost.append(avg_loss)
 
         if (config['Print']) & (n%50 == 0):
             print(f"Step #{n}")
             print(f"Energy = {avg_E}")
             print(f"Variance = {var_E}")
+            print(f"Staggered Magnetization = {avg_abs_stag_mag}")
             print(" ")
 
         if (config['CKPT']) & (n%50 == 0):
@@ -177,6 +184,7 @@ def Train_w_VMC(config):
             print(f"Saved training quantitites for step {n} in {path}.")
             np.save(path+'/Energy',energy)
             np.save(path+'/Variance',variance)
+            np.save(path+'/StagMag',stag_mag)
             np.save(path+'/Cost',cost)
                 
-    return wavefxn, energy, variance, cost
+    return wavefxn, energy, variance, stag_mag, cost
